@@ -1,0 +1,26 @@
+[
+  {
+    "name": "The Fool",
+    "arcana": "Major Arcana",
+    "suit": "Major Arcana",
+    "upright_meaning": "New beginnings, adventure, freedom, and unlimited potential.",
+    "reversed_meaning": "Recklessness, poor decisions, naivety, and lack of direction.",
+    "keywords": "Beginnings, Adventure, Innocence"
+  },
+  {
+    "name": "The Magician",
+    "arcana": "Major Arcana",
+    "suit": "Major Arcana",
+    "upright_meaning": "Manifestation, resourcefulness, inspired action.",
+    "reversed_meaning": "Manipulation, poor planning, untapped talents.",
+    "keywords": "Power, Skill, Manifestation"
+  },
+  {
+    "name": "The High Priestess",
+    "arcana": "Major Arcana",
+    "suit": "Major Arcana",
+    "upright_meaning": "Intuition, mystery, inner wisdom.",
+    "reversed_meaning": "Secrets, confusion, hidden motives.",
+    "keywords": "Intuition, Wisdom, Mystery"
+  }
+]
