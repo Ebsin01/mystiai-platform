@@ -9,6 +9,7 @@ from app.model.palm_analysis import PalmAnalysis
 from app.model.personality_report import PersonalityReport
 
 from app.services.personality_engine import generate_personality_report
+from app.services.notification_service import create_notification
 
 router = APIRouter(
     prefix="/reports",
@@ -80,5 +81,12 @@ def create_report(
     db.add(new_report)
     db.commit()
     db.refresh(new_report)
+    create_notification(
+    db=db,
+    user_id=current_user.id,
+    title="Personality Report Ready",
+    message="Your AI personality report has been generated successfully.",
+    notification_type="report"
+    )
 
     return new_report

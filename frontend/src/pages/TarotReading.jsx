@@ -1,7 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import tarotService from '../services/tarotService';
 import authService from '../services/authService';
+import { useNotification } from '../contexts/NotificationContext';
+
+
 
 /**
  * TarotReading Component
@@ -12,6 +16,7 @@ const TarotReading = () => {
   const [question, setQuestion] = useState('What does my future look like?');
   const [reading, setReading] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { refreshUnreadCount } = useNotification();
   const [error, setError] = useState('');
   const [historyGroups, setHistoryGroups] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -113,6 +118,7 @@ const TarotReading = () => {
 
       setReading(data);
       await loadHistory();
+      refreshUnreadCount();
     } catch (err) {
       console.error('Failed to generate three-card reading:', err);
 

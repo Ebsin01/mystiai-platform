@@ -27,7 +27,8 @@ from app.services.palm_analysis_engine import (
 from app.services.ai_interpretation_service import (
     generate_ai_interpretation
 )
-
+from app.model.notification import Notification
+from app.dependency import get_current_user
 
 # ============================================================
 # DATABASE
@@ -527,6 +528,20 @@ async def analyze_palm_image(
         analysis
 
     )
+    # -----------------------------------------
+# CREATE NOTIFICATION AFTER SUCCESSFUL ANALYSIS
+# -----------------------------------------
+
+    notification = Notification(
+        user_id=current_user.id,
+        title="Palm Analysis Completed",
+        message="Your palm analysis has been successfully completed. You can now view your results and generate your personality interpretation.",
+        type="analysis"
+    )
+
+    db.add(notification)
+    db.commit()
+    db.refresh(notification)
 
 
     # ========================================================

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import palmService from '../services/palmService';
+import { useNotification } from '../contexts/NotificationContext';
 
 /**
  * PalmAnalysisUpload Component
@@ -10,6 +11,7 @@ import palmService from '../services/palmService';
  */
 const PalmAnalysisUpload = () => {
   const navigate = useNavigate();
+  const { refreshUnreadCount } = useNotification();
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -130,6 +132,7 @@ const PalmAnalysisUpload = () => {
       }
 
       setAnalysisResult(result);
+      refreshUnreadCount();
     } catch (err) {
       console.error('Failed to analyze palm:', err);
 
@@ -199,6 +202,7 @@ const PalmAnalysisUpload = () => {
     try {
       const result = await palmService.generateInterpretation(analysisResult.analysis_id);
       setInterpretationResult(result);
+      refreshUnreadCount();
     } catch (err) {
       console.error('Failed to generate palm interpretation:', err);
 

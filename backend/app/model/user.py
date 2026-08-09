@@ -16,21 +16,25 @@ class User(Base):
     )
 
     full_name = Column(
-        String(100)
+        String(100),
+        nullable=True
     )
 
     email = Column(
         String(100),
-        unique=True
+        unique=True,
+        nullable=False
     )
 
     password = Column(
-        String(255)
+        String(255),
+        nullable=False
     )
 
     role = Column(
         String(30),
-        default="User"
+        default="User",
+        nullable=False
     )
 
     created_at = Column(
@@ -50,6 +54,12 @@ class User(Base):
 
     reports = relationship(
         "PersonalityReport",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    notifications = relationship(
+        "Notification",
         back_populates="user",
         cascade="all, delete-orphan"
     )

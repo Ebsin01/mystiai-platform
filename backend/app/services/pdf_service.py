@@ -286,10 +286,20 @@ def create_pdf(report):
     # LOGO
     # =====================================================
 
-    logo = os.path.join(
-        "assets",
-        "download.png"
-    )
+    backend_dir = Path(__file__).resolve().parents[2]
+
+    logo = backend_dir / "assets" / "download.png"
+
+    if logo.exists():
+
+        img = Image(str(logo))
+
+        img.drawWidth = 1.25 * inch
+        img.drawHeight = 1.25 * inch
+        img.hAlign = "CENTER"
+
+        story.append(img)
+        story.append(Spacer(1, 10))
 
     if os.path.exists(logo):
 

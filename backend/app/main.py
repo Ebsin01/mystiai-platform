@@ -20,6 +20,7 @@ from app.routers import reports
 from app.model.three_card_reading import ThreeCardReading
 from app.services.gemini_service import generate_ai_report
 from app.routers import pdf
+from app.routers import notifications
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -66,6 +67,9 @@ app.include_router(palm.router)
 app.include_router(tarot.router)
 app.include_router(reports.router)
 app.include_router(pdf.router)
+app.include_router(
+    notifications.router
+)
 
 
 @app.get("/", summary="Health check")

@@ -23,3 +23,14 @@ __pycache__/
 Thumbs.db
 backend/uploads/
 datasets/palmistry/
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.pyc
+
+uploads/
+backend/uploads/
+
+*.log
