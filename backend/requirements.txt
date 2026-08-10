@@ -46,13 +46,13 @@ markdown-it-py==4.2.0
 MarkupSafe==3.0.3
 matplotlib==3.11.1
 mdurl==0.1.2
-mediapipe==0.10.21
+mediapipe==0.10.32
 ml_dtypes==0.5.4
 namex==0.1.0
 narwhals==2.24.0
 numpy==1.26.4
 opencv-contrib-python==4.11.0.86
-opencv-python==5.0.0.93
+protobuf==6.31.1
 opt_einsum==3.4.0
 optree==0.19.1
 packaging==26.2
@@ -60,7 +60,6 @@ pandas==3.0.5
 passlib==1.7.4
 pillow==12.3.0
 pluggy==1.6.0
-protobuf==6.31.1
 psycopg2-binary==2.9.12
 pyasn1==0.6.3
 pyasn1_modules==0.4.2
