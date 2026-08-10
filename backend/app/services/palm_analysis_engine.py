@@ -1,26 +1,21 @@
+
 import cv2
 import numpy as np
 import math
 
 
 # ============================================================
-# DISTANCE
+# BASIC GEOMETRY
 # ============================================================
 
 def calculate_distance(x1, y1, x2, y2):
-
     return math.sqrt(
         (x2 - x1) ** 2 +
         (y2 - y1) ** 2
     )
 
 
-# ============================================================
-# ANGLE
-# ============================================================
-
 def calculate_angle(x1, y1, x2, y2):
-
     angle = math.degrees(
         math.atan2(
             y2 - y1,
@@ -40,13 +35,10 @@ def calculate_confidence(
     expected_min,
     expected_max
 ):
-
     if detected_value <= 0:
-
         return 0.0
 
     if expected_min <= detected_value <= expected_max:
-
         return 0.90
 
     return 0.60
@@ -60,49 +52,30 @@ def classify_line_length(
     length,
     palm_width
 ):
-
     if palm_width <= 0:
-
         return "Unknown"
 
     ratio = length / palm_width
 
-
     if ratio < 0.35:
-
         return "Short"
 
-    elif ratio < 0.70:
-
+    if ratio < 0.70:
         return "Medium"
 
-    else:
-
-        return "Long"
+    return "Long"
 
 
-# ============================================================
-# HEAD LINE CLASSIFICATION
-# ============================================================
-
-def classify_head_line(
-    angle
-):
-
+def classify_head_line(angle):
     angle = abs(angle)
 
-
     if angle <= 15:
-
         return "Straight"
 
-    elif angle <= 45:
-
+    if angle <= 45:
         return "Slightly Curved"
 
-    else:
-
-        return "Curved"
+    return "Curved"
 
 
 # ============================================================
@@ -113,158 +86,267 @@ def classify_palm_shape(
     palm_width,
     palm_height
 ):
-
     if palm_width <= 0:
-
         return "Unknown"
-
 
     ratio = palm_height / palm_width
 
-
     if ratio < 1.05:
-
         return "Wide"
 
-    elif ratio < 1.25:
-
+    if ratio < 1.25:
         return "Square"
 
-    elif ratio < 1.60:
-
+    if ratio < 1.60:
         return "Rectangular"
 
-    else:
-
-        return "Long"
+    return "Long"
 
 
 # ============================================================
-# FIND HAND CONTOUR
+# LANDMARK NORMALIZATION
 # ============================================================
 
-def find_hand_contour(
-    image
+def normalize_landmarks(
+    landmarks,
+    image_width,
+    image_height
 ):
+    normalized = []
 
-    gray = cv2.cvtColor(
-        image,
-        cv2.COLOR_BGR2GRAY
-    )
+    for landmark in landmarks:
 
+        normalized.append({
+            "id": int(landmark["id"]),
 
-    blurred = cv2.GaussianBlur(
-        gray,
-        (5, 5),
-        0
-    )
+            "x": float(landmark["x"]) * image_width,
 
+            "y": float(landmark["y"]) * image_height,
 
-    _, threshold = cv2.threshold(
-        blurred,
-        0,
-        255,
-        cv2.THRESH_BINARY_INV +
-        cv2.THRESH_OTSU
-    )
+            "z": float(
+                landmark.get("z", 0.0)
+            )
+        })
+
+    return normalized
 
 
-    contours, _ = cv2.findContours(
-        threshold,
-        cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE
-    )
+# ============================================================
+# HAND REGION
+# ============================================================
 
-
-    if not contours:
-
+def calculate_hand_region(
+    landmarks,
+    image_width,
+    image_height
+):
+    if not landmarks:
         return None
 
+    xs = [
+        landmark["x"]
+        for landmark in landmarks
+    ]
 
-    largest_contour = max(
-        contours,
-        key=cv2.contourArea
+    ys = [
+        landmark["y"]
+        for landmark in landmarks
+    ]
+
+    min_x = max(
+        0,
+        int(min(xs))
     )
 
+    max_x = min(
+        image_width - 1,
+        int(max(xs))
+    )
 
-    return largest_contour
+    min_y = max(
+        0,
+        int(min(ys))
+    )
+
+    max_y = min(
+        image_height - 1,
+        int(max(ys))
+    )
+
+    width = max_x - min_x
+    height = max_y - min_y
+
+    return {
+        "x": min_x,
+        "y": min_y,
+        "width": width,
+        "height": height
+    }
 
 
 # ============================================================
-# PALM ANALYSIS ENGINE
+# PALM REGION
 # ============================================================
 
-def analyze_palm(
-    image_path
+def calculate_palm_region(
+    landmarks,
+    image_width,
+    image_height
 ):
+    if len(landmarks) < 21:
+        return None
 
-    image = cv2.imread(
-        image_path
+    palm_ids = [
+        0,   # wrist
+        5,   # index MCP
+        9,   # middle MCP
+        13,  # ring MCP
+        17   # pinky MCP
+    ]
+
+    points = [
+        landmarks[index]
+        for index in palm_ids
+    ]
+
+    xs = [
+        point["x"]
+        for point in points
+    ]
+
+    ys = [
+        point["y"]
+        for point in points
+    ]
+
+    min_x = max(
+        0,
+        min(xs)
     )
 
+    max_x = min(
+        image_width - 1,
+        max(xs)
+    )
 
-    if image is None:
+    min_y = max(
+        0,
+        min(ys)
+    )
 
-        raise FileNotFoundError(
-            f"Image not found: {image_path}"
-        )
+    max_y = min(
+        image_height - 1,
+        max(ys)
+    )
 
+    width = max_x - min_x
+    height = max_y - min_y
+
+    if width <= 0 or height <= 0:
+        return None
+
+    return {
+        "min_x": min_x,
+        "max_x": max_x,
+        "min_y": min_y,
+        "max_y": max_y,
+        "width": width,
+        "height": height
+    }
+
+
+# ============================================================
+# PALM CROP
+# ============================================================
+
+def crop_palm_region(
+    image,
+    palm_region
+):
+    if palm_region is None:
+        return None
 
     image_height, image_width = image.shape[:2]
 
-
-    # ========================================================
-    # PREPROCESSING
-    # ========================================================
-
-    gray = cv2.cvtColor(
-        image,
-        cv2.COLOR_BGR2GRAY
+    margin_x = max(
+        30,
+        int(palm_region["width"] * 0.35)
     )
 
+    margin_y = max(
+        30,
+        int(palm_region["height"] * 0.35)
+    )
+
+    x1 = max(
+        0,
+        int(palm_region["min_x"] - margin_x)
+    )
+
+    y1 = max(
+        0,
+        int(palm_region["min_y"] - margin_y)
+    )
+
+    x2 = min(
+        image_width,
+        int(palm_region["max_x"] + margin_x)
+    )
+
+    y2 = min(
+        image_height,
+        int(palm_region["max_y"] + margin_y)
+    )
+
+    if x2 <= x1 or y2 <= y1:
+        return None
+
+    return image[
+        y1:y2,
+        x1:x2
+    ]
+
+
+# ============================================================
+# LINE DETECTION
+# ============================================================
+
+def detect_lines(
+    palm_image
+):
+    if palm_image is None:
+        return []
+
+    gray = cv2.cvtColor(
+        palm_image,
+        cv2.COLOR_BGR2GRAY
+    )
 
     blurred = cv2.GaussianBlur(
         gray,
         (5, 5),
         0
     )
-
-
-    # ========================================================
-    # CLAHE
-    # ========================================================
 
     clahe = cv2.createCLAHE(
         clipLimit=2.0,
         tileGridSize=(8, 8)
     )
 
-
     enhanced = clahe.apply(
         blurred
     )
 
-
-    # ========================================================
-    # EDGE DETECTION
-    # ========================================================
-
     edges = cv2.Canny(
         enhanced,
-        50,
-        150
+        40,
+        120
     )
-
-
-    # ========================================================
-    # MORPHOLOGICAL PROCESSING
-    # ========================================================
 
     kernel = np.ones(
         (3, 3),
         np.uint8
     )
-
 
     processed = cv2.morphologyEx(
         edges,
@@ -272,324 +354,609 @@ def analyze_palm(
         kernel
     )
 
-
-    # ========================================================
-    # ACTUAL HAND CONTOUR
-    # ========================================================
-
-    contour = find_hand_contour(
-        image
-    )
-
-
-    if contour is not None:
-
-        x, y, w, h = cv2.boundingRect(
-            contour
-        )
-
-
-        palm_width = float(w)
-
-        palm_length = float(h)
-
-
-    else:
-
-        palm_width = image_width * 0.60
-
-        palm_length = image_height * 0.60
-
-
-    # ========================================================
-    # PALM SHAPE
-    # ========================================================
-
-    palm_shape = classify_palm_shape(
-        palm_width,
-        palm_length
-    )
-
-
-    # ========================================================
-    # LINE DETECTION
-    # ========================================================
-
     lines = cv2.HoughLinesP(
-
         processed,
 
         1,
 
         np.pi / 180,
 
-        threshold=30,
+        threshold=35,
 
-        minLineLength=30,
+        minLineLength=35,
 
-        maxLineGap=30
-
+        maxLineGap=20
     )
 
+    if lines is None:
+        return []
 
     detected_lines = []
 
+    for line in lines:
 
-    if lines is not None:
+        x1, y1, x2, y2 = line[0]
 
-        for line in lines:
+        length = calculate_distance(
+            x1,
+            y1,
+            x2,
+            y2
+        )
 
-            x1, y1, x2, y2 = line[0]
+        angle = calculate_angle(
+            x1,
+            y1,
+            x2,
+            y2
+        )
+
+        center_x = (
+            x1 + x2
+        ) / 2
+
+        center_y = (
+            y1 + y2
+        ) / 2
+
+        detected_lines.append({
+
+            "x1": int(x1),
+            "y1": int(y1),
+
+            "x2": int(x2),
+            "y2": int(y2),
+
+            "length": float(length),
+
+            "angle": float(angle),
+
+            "center_x": float(center_x),
+
+            "center_y": float(center_y)
+        })
+
+    return detected_lines
 
 
-            length = calculate_distance(
+# ============================================================
+# LINE SCORE
+# ============================================================
 
-                x1,
-                y1,
-                x2,
-                y2
+def score_line(
+    line,
+    target_y,
+    palm_width,
+    palm_height,
+    preferred_angles=None
+):
+    if palm_width <= 0 or palm_height <= 0:
+        return -1
 
+    y = line["center_y"]
+    angle = line["angle"]
+    length = line["length"]
+
+    y_distance = abs(
+        y - target_y
+    ) / palm_height
+
+    position_score = max(
+        0.0,
+        1.0 - y_distance * 3.0
+    )
+
+    length_score = min(
+        length / palm_width,
+        1.5
+    )
+
+    angle_score = 0.5
+
+    if preferred_angles:
+
+        angle_distance = min(
+            abs(
+                angle - preferred_angle
             )
+            for preferred_angle
+            in preferred_angles
+        )
 
+        angle_score = max(
+            0.0,
+            1.0 - angle_distance / 90.0
+        )
 
-            angle = calculate_angle(
-
-                x1,
-                y1,
-                x2,
-                y2
-
-            )
-
-
-            center_x = (
-
-                x1 + x2
-
-            ) / 2
-
-
-            center_y = (
-
-                y1 + y2
-
-            ) / 2
-
-
-            detected_lines.append({
-
-                "x1": x1,
-
-                "y1": y1,
-
-                "x2": x2,
-
-                "y2": y2,
-
-                "length": length,
-
-                "angle": angle,
-
-                "center_x": center_x,
-
-                "center_y": center_y
-
-            })
-
-
-    # ========================================================
-    # SORT LINES BY LENGTH
-    # ========================================================
-
-    detected_lines.sort(
-
-        key=lambda line:
-
-        line["length"],
-
-        reverse=True
-
+    return (
+        position_score * 0.45
+        +
+        length_score * 0.35
+        +
+        angle_score * 0.20
     )
 
 
-    # ========================================================
-    # SELECT LINES BASED ON IMAGE POSITION
-    # ========================================================
+# ============================================================
+# SELECT PALM LINES
+# ============================================================
+
+def select_palm_lines(
+    detected_lines,
+    palm_width,
+    palm_height
+):
+    if not detected_lines:
+        return (
+            None,
+            None,
+            None
+        )
+
+    # Remove extremely short noise segments.
+
+    minimum_length = max(
+        25.0,
+        palm_width * 0.08
+    )
+
+    candidates = [
+        line
+        for line in detected_lines
+        if line["length"] >= minimum_length
+    ]
+
+    if not candidates:
+        return (
+            None,
+            None,
+            None
+        )
+
+    # --------------------------------------------------------
+    # HEART LINE
+    # --------------------------------------------------------
+
+    heart_target_y = (
+        palm_height * 0.28
+    )
+
+    heart_candidates = []
+
+    for line in candidates:
+
+        y = line["center_y"]
+
+        angle = line["angle"]
+
+        if not (
+            palm_height * 0.08
+            <= y
+            <= palm_height * 0.50
+        ):
+            continue
+
+        # Prefer horizontal/slightly diagonal
+        # structures.
+
+        if angle > 70:
+            continue
+
+        score = score_line(
+            line,
+            heart_target_y,
+            palm_width,
+            palm_height,
+            preferred_angles=[
+                0,
+                15,
+                30,
+                45
+            ]
+        )
+
+        line_copy = dict(line)
+        line_copy["_score"] = score
+
+        heart_candidates.append(
+            line_copy
+        )
 
     heart_line = None
 
+    if heart_candidates:
+
+        heart_line = max(
+            heart_candidates,
+            key=lambda line:
+            line["_score"]
+        )
+
+
+    # --------------------------------------------------------
+    # HEAD LINE
+    # --------------------------------------------------------
+
+    head_target_y = (
+        palm_height * 0.52
+    )
+
+    head_candidates = []
+
+    for line in candidates:
+
+        if (
+            heart_line is not None
+            and line is heart_line
+        ):
+            continue
+
+        y = line["center_y"]
+
+        if not (
+            palm_height * 0.25
+            <= y
+            <= palm_height * 0.75
+        ):
+            continue
+
+        score = score_line(
+            line,
+            head_target_y,
+            palm_width,
+            palm_height,
+            preferred_angles=[
+                0,
+                15,
+                30,
+                45,
+                60
+            ]
+        )
+
+        line_copy = dict(line)
+        line_copy["_score"] = score
+
+        head_candidates.append(
+            line_copy
+        )
+
     head_line = None
+
+    if head_candidates:
+
+        head_line = max(
+            head_candidates,
+            key=lambda line:
+            line["_score"]
+        )
+
+
+    # --------------------------------------------------------
+    # LIFE LINE
+    # --------------------------------------------------------
+
+    life_candidates = []
+
+    for line in candidates:
+
+        if (
+            heart_line is not None
+            and line is heart_line
+        ):
+            continue
+
+        if (
+            head_line is not None
+            and line is head_line
+        ):
+            continue
+
+        x = line["center_x"]
+        y = line["center_y"]
+        angle = line["angle"]
+
+        # Life line is expected toward the
+        # thumb side of the palm.
+
+        if x > palm_width * 0.75:
+            continue
+
+        if y < palm_height * 0.15:
+            continue
+
+        # Prefer diagonal/vertical structures.
+
+        if angle < 20:
+            continue
+
+        score = score_line(
+            line,
+            palm_height * 0.55,
+            palm_width,
+            palm_height,
+            preferred_angles=[
+                45,
+                60,
+                75,
+                90,
+                120,
+                135
+            ]
+        )
+
+        line_copy = dict(line)
+        line_copy["_score"] = score
+
+        life_candidates.append(
+            line_copy
+        )
 
     life_line = None
 
+    if life_candidates:
 
-    for line in detected_lines:
-
-        center_y = line["center_y"]
-
-        center_x = line["center_x"]
-
-
-        # Upper area = possible heart line
-
-        if (
-
-            heart_line is None
-
-            and center_y < image_height * 0.45
-
-        ):
-
-            heart_line = line
+        life_line = max(
+            life_candidates,
+            key=lambda line:
+            line["_score"]
+        )
 
 
-        # Middle area = possible head line
-
-        elif (
-
-            head_line is None
-
-            and image_height * 0.35
-
-            <= center_y
-
-            <= image_height * 0.70
-
-        ):
-
-            head_line = line
+    return (
+        heart_line,
+        head_line,
+        life_line
+    )
 
 
-        # Lower/side area = possible life line
+# ============================================================
+# EMPTY LINE
+# ============================================================
 
-        elif (
-
-            life_line is None
-
-            and center_y > image_height * 0.45
-
-        ):
-
-            life_line = line
+def empty_line():
+    return {
+        "length": 0.0,
+        "angle": 0.0
+    }
 
 
-    # ========================================================
+# ============================================================
+# PALM ANALYSIS
+# ============================================================
+
+def analyze_palm(
+    image_path,
+    landmarks
+):
+    # --------------------------------------------------------
+    # LOAD IMAGE
+    # --------------------------------------------------------
+
+    image = cv2.imread(
+        image_path
+    )
+
+    if image is None:
+        raise FileNotFoundError(
+            f"Image not found: {image_path}"
+        )
+
+    image_height, image_width = (
+        image.shape[:2]
+    )
+
+    # --------------------------------------------------------
+    # VALIDATE LANDMARKS
+    # --------------------------------------------------------
+
+    if not landmarks:
+        return {
+            "palm_shape": {
+                "value": "Unknown",
+                "confidence": 0.0
+            },
+
+            "heart_line": {
+                "classification": "Unknown",
+                "length": 0.0,
+                "confidence": 0.0
+            },
+
+            "head_line": {
+                "classification": "Unknown",
+                "length": 0.0,
+                "confidence": 0.0
+            },
+
+            "life_line": {
+                "classification": "Unknown",
+                "length": 0.0,
+                "confidence": 0.0
+            },
+
+            "measurements": {
+                "image_width": image_width,
+                "image_height": image_height,
+                "palm_width": 0.0,
+                "palm_length": 0.0,
+                "detected_lines": 0
+            }
+        }
+
+    # --------------------------------------------------------
+    # NORMALIZE LANDMARKS
+    # --------------------------------------------------------
+
+    pixel_landmarks = normalize_landmarks(
+        landmarks,
+        image_width,
+        image_height
+    )
+
+    # --------------------------------------------------------
+    # PALM REGION
+    # --------------------------------------------------------
+
+    palm_region = calculate_palm_region(
+        pixel_landmarks,
+        image_width,
+        image_height
+    )
+
+    hand_region = calculate_hand_region(
+        pixel_landmarks,
+        image_width,
+        image_height
+    )
+
+    # --------------------------------------------------------
+    # PALM DIMENSIONS
+    # --------------------------------------------------------
+
+    if palm_region is not None:
+
+        palm_width = float(
+            palm_region["width"]
+        )
+
+        palm_length = float(
+            palm_region["height"]
+        )
+
+    elif hand_region is not None:
+
+        palm_width = float(
+            hand_region["width"]
+        )
+
+        palm_length = float(
+            hand_region["height"]
+        )
+
+    else:
+
+        palm_width = 0.0
+        palm_length = 0.0
+
+    # --------------------------------------------------------
+    # PALM SHAPE
+    # --------------------------------------------------------
+
+    palm_shape = classify_palm_shape(
+        palm_width,
+        palm_length
+    )
+
+    # --------------------------------------------------------
+    # PALM CROP
+    # --------------------------------------------------------
+
+    palm_image = crop_palm_region(
+        image,
+        palm_region
+    )
+
+    # --------------------------------------------------------
+    # LINE DETECTION
+    # --------------------------------------------------------
+
+    detected_lines = detect_lines(
+        palm_image
+    )
+
+    # --------------------------------------------------------
+    # SORT
+    # --------------------------------------------------------
+
+    detected_lines.sort(
+        key=lambda line:
+        line["length"],
+        reverse=True
+    )
+
+    # --------------------------------------------------------
+    # SELECT
+    # --------------------------------------------------------
+
+    (
+        heart_line,
+        head_line,
+        life_line
+    ) = select_palm_lines(
+        detected_lines,
+        palm_width,
+        palm_length
+    )
+
+    # --------------------------------------------------------
     # FALLBACK
-    # ========================================================
+    # --------------------------------------------------------
 
     if heart_line is None:
-
-        heart_line = {
-
-            "length": 0,
-
-            "angle": 0
-
-        }
-
+        heart_line = empty_line()
 
     if head_line is None:
-
-        head_line = {
-
-            "length": 0,
-
-            "angle": 0
-
-        }
-
+        head_line = empty_line()
 
     if life_line is None:
+        life_line = empty_line()
 
-        life_line = {
-
-            "length": 0,
-
-            "angle": 0
-
-        }
-
-
-    # ========================================================
+    # --------------------------------------------------------
     # CLASSIFICATION
-    # ========================================================
+    # --------------------------------------------------------
 
-    heart_classification = classify_line_length(
-
-        heart_line["length"],
-
-        palm_width
-
+    heart_classification = (
+        classify_line_length(
+            heart_line["length"],
+            palm_width
+        )
     )
 
-
-    head_classification = classify_head_line(
-
-        head_line["angle"]
-
+    head_classification = (
+        classify_head_line(
+            head_line["angle"]
+        )
     )
 
-
-    life_classification = classify_line_length(
-
-        life_line["length"],
-
-        palm_width
-
+    life_classification = (
+        classify_line_length(
+            life_line["length"],
+            palm_width
+        )
     )
 
-
-    # ========================================================
+    # --------------------------------------------------------
     # CONFIDENCE
-    # ========================================================
+    # --------------------------------------------------------
 
     heart_confidence = calculate_confidence(
-
         heart_line["length"],
-
-        palm_width * 0.20,
-
+        palm_width * 0.15,
         palm_width * 1.20
-
     )
-
 
     head_confidence = calculate_confidence(
-
         head_line["length"],
-
-        palm_width * 0.20,
-
+        palm_width * 0.15,
         palm_width * 1.20
-
     )
-
 
     life_confidence = calculate_confidence(
-
         life_line["length"],
-
-        palm_width * 0.20,
-
+        palm_width * 0.15,
         palm_width * 1.20
-
     )
-
 
     palm_confidence = (
-
         0.90
-
-        if contour is not None
-
+        if palm_region is not None
         else 0.60
-
     )
 
-
-    # ========================================================
+    # --------------------------------------------------------
     # FINAL RESULT
-    # ========================================================
+    # --------------------------------------------------------
 
     return {
 
@@ -597,196 +964,81 @@ def analyze_palm(
 
             "value": palm_shape,
 
-            "confidence": palm_confidence
-
+            "confidence": round(
+                palm_confidence,
+                2
+            )
         },
-
 
         "heart_line": {
 
             "classification":
-
                 heart_classification,
 
-            "length":
+            "length": round(
+                heart_line["length"],
+                4
+            ),
 
-                round(
-
-                    heart_line["length"],
-
-                    4
-
-                ),
-
-            "confidence":
-
-                heart_confidence
-
+            "confidence": round(
+                heart_confidence,
+                2
+            )
         },
-
 
         "head_line": {
 
             "classification":
-
                 head_classification,
 
-            "length":
+            "length": round(
+                head_line["length"],
+                4
+            ),
 
-                round(
-
-                    head_line["length"],
-
-                    4
-
-                ),
-
-            "confidence":
-
-                head_confidence
-
+            "confidence": round(
+                head_confidence,
+                2
+            )
         },
-
 
         "life_line": {
 
             "classification":
-
                 life_classification,
 
-            "length":
+            "length": round(
+                life_line["length"],
+                4
+            ),
 
-                round(
-
-                    life_line["length"],
-
-                    4
-
-                ),
-
-            "confidence":
-
-                life_confidence
-
+            "confidence": round(
+                life_confidence,
+                2
+            )
         },
-
 
         "measurements": {
 
             "image_width":
-
                 image_width,
 
             "image_height":
-
                 image_height,
 
             "palm_width":
-
                 round(
-
                     palm_width,
-
                     4
-
                 ),
 
             "palm_length":
-
                 round(
-
                     palm_length,
-
                     4
-
                 ),
 
             "detected_lines":
-
                 len(detected_lines)
-
         }
-
     }
-
-
-# ============================================================
-# TEST
-# ============================================================
-
-if __name__ == "__main__":
-
-    image_path = (
-
-        r"C:\Users\Admin\Documents"
-
-        r"\AI-Palmistry-Tarot"
-
-        r"\datasets\palmistry"
-
-        r"\001"
-
-        r"\001_F_L_32.JPG"
-
-    )
-
-
-    result = analyze_palm(
-
-        image_path
-
-    )
-
-
-    print("\n")
-
-    print("=" * 60)
-
-    print("PALM ANALYSIS RESULT")
-
-    print("=" * 60)
-
-
-    print("\nPALM SHAPE")
-
-    print(
-
-        result["palm_shape"]
-
-    )
-
-
-    print("\nHEART LINE")
-
-    print(
-
-        result["heart_line"]
-
-    )
-
-
-    print("\nHEAD LINE")
-
-    print(
-
-        result["head_line"]
-
-    )
-
-
-    print("\nLIFE LINE")
-
-    print(
-
-        result["life_line"]
-
-    )
-
-
-    print("\nMEASUREMENTS")
-
-    print(
-
-        result["measurements"]
-
-    )
