@@ -8,7 +8,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 BASE_DIR = Path(__file__).resolve().parent
 MODEL_DIR = BASE_DIR / "models"
 
-model = load_model(MODEL_DIR / "question_classifier.keras")
+model = load_model(MODEL_DIR / "question_classifier.h5")
 tokenizer = joblib.load(MODEL_DIR / "tokenizer.pkl")
 label_encoder = joblib.load(MODEL_DIR / "label_encoder.pkl")
 
