@@ -1,36 +1,55 @@
+import os
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy import text
 
-from app.database import Base, engine
+# Database imports
+from app.database import Base, engine 
 
-from app.routers import auth
-from app.routers import palm
-
-# Import models so SQLAlchemy knows about them
-from app.model import user
-from app.model import palm_analysis
-from app.model import palm_interpretation
+# Import models so SQLAlchemy registers them before table creation
+from app.model import user, palm_analysis, palm_interpretation
 from app.model.tarot_card import TarotCard
-from app.routers import tarot
 from app.model.user import User
 from app.model.palm_analysis import PalmAnalysis
 from app.model.tarot_reading import TarotReading
-from app.routers import reports
 from app.model.three_card_reading import ThreeCardReading
-from app.services.gemini_service import generate_ai_report
-from app.routers import pdf
-from app.routers import notifications
 
-# Create database tables
+# Import routers & services
+from app.routers import auth, palm, tarot, reports, pdf, notifications
+from app.services.gemini_service import generate_ai_report
+
+# 1. Create database tables on startup
 Base.metadata.create_all(bind=engine)
 
+# 2. Instantiate FastAPI app (Single instance)
+app = FastAPI(title="Palmistry & Tarot Intelligence Platform")
 
-app = FastAPI(
-    title="Palmistry & Tarot Intelligence Platform"
+# 3. CORS Configuration
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
+# 4. Include Routers
+app.include_router(auth.router)
+app.include_router(palm.router)
+app.include_router(tarot.router)
+app.include_router(reports.router)
+app.include_router(pdf.router)
+app.include_router(notifications.router)
 
+# 5. Pydantic Models
 class AIModelInfoResponse(BaseModel):
     model_name: str
     framework: str
@@ -40,45 +59,10 @@ class AIModelInfoResponse(BaseModel):
     sequence_length: int
     tokenizer_words: int
 
-
-# CORS configuration
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000"
-]
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
-)
-
-
-# Authentication routes
-app.include_router(auth.router)
-
-
-# Palm analysis routes
-app.include_router(palm.router)
-app.include_router(tarot.router)
-app.include_router(reports.router)
-app.include_router(pdf.router)
-app.include_router(
-    notifications.router
-)
-
-
+# 6. Routes
 @app.get("/", summary="Health check")
 def home():
-
-    return {
-        "message": "API Running Successfully"
-    }
-
+    return {"status": "ok", "message": "API Running Successfully"}
 
 @app.get(
     "/ai/model-info",
@@ -96,8 +80,6 @@ def get_ai_model_info():
         sequence_length=20,
         tokenizer_words=5000,
     )
-    
-from sqlalchemy import text
 
 @app.get("/debug")
 def debug():
@@ -117,9 +99,9 @@ def debug():
         "schema": schema,
         "columns": [c[0] for c in columns]
     }
+
 @app.get("/test-gemini")
 def test_gemini():
-
     scores = {
         "optimism": 85,
         "leadership": 78,
@@ -133,5 +115,9 @@ def test_gemini():
         "risk_taking": 65,
         "emotional_balance": 79
     }
-
     return generate_ai_report(scores)
+
+# 7. Local Execution Execution Block (Must be at the very bottom)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
