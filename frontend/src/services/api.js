@@ -1,13 +1,13 @@
 import axios from 'axios';
 
-// FastAPI backend base URL - read from environment variables with fallback
-const API_BASE_URL =
+// FastAPI backend base URL - read from environment variables with fallback to live Render backend
+const BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   process.env.REACT_APP_API_BASE_URL ||
-  'http://127.0.0.1:8000';
+  'https://mystial-platform-backend.onrender.com';
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: BASE_URL,
 });
 
 // Axios request interceptor to automatically inject the Bearer token from localStorage 'access_token' or 'token'
