@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import authService from '../services/authService';
 
 const positionOrder = [
@@ -39,11 +39,7 @@ const ThreeCardHistory = () => {
     setError('');
 
     try {
-      const response = await axios.get('http://127.0.0.1:8000/tarot/three-card-readings', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await api.get('/tarot/three-card-readings');
 
       const rawReadings = Array.isArray(response?.data?.readings) ? response.data.readings : [];
 

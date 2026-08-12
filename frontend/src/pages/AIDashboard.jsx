@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 const AIDashboard = () => {
   const [modelInfo, setModelInfo] = useState(null);
@@ -9,7 +9,7 @@ const AIDashboard = () => {
   useEffect(() => {
     const fetchModelInfo = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:8000/ai/model-info');
+        const response = await api.get('/ai/model-info');
         setModelInfo(response.data);
       } catch (err) {
         console.error('Failed to fetch model info:', err);
