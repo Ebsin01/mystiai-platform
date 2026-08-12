@@ -10,6 +10,11 @@ from sqlalchemy.orm import Session
 
 import os
 import uuid
+import logging
+from pathlib import Path
+
+# Logging setup
+logger = logging.getLogger(__name__)
 
 
 # ============================================================
@@ -70,19 +75,21 @@ router = APIRouter(
 
 
 # ============================================================
-# UPLOAD FOLDER
+# UPLOAD FOLDER - Use absolute path
 # ============================================================
 
-UPLOAD_FOLDER = "uploads/palms"
+# Get the backend directory (routers.py -> parents[2] = backend)
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+UPLOAD_FOLDER = str(BACKEND_DIR / "uploads" / "palms")
 
-
-os.makedirs(
-
-    UPLOAD_FOLDER,
-
-    exist_ok=True
-
-)
+try:
+    os.makedirs(
+        UPLOAD_FOLDER,
+        exist_ok=True
+    )
+    logger.info(f"Upload folder ready at: {UPLOAD_FOLDER}")
+except Exception as e:
+    logger.error(f"Failed to create upload folder at {UPLOAD_FOLDER}: {str(e)}")
 
 
 # ============================================================

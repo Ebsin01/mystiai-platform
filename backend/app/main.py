@@ -1,9 +1,13 @@
 import os
+import logging
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import text
+
+# Logging setup
+logger = logging.getLogger(__name__)
 
 # Database imports
 from app.database import Base, engine 
@@ -21,17 +25,45 @@ from app.routers import auth, palm, tarot, reports, pdf, notifications
 from app.services.gemini_service import generate_ai_report
 
 # 1. Create database tables on startup
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to create database tables: {str(e)}")
+    raise
 
 # 2. Instantiate FastAPI app (Single instance)
 app = FastAPI(title="Palmistry & Tarot Intelligence Platform")
 
-# 3. CORS Configuration
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-]
+# 3. CORS Configuration - Environment-based
+def _get_cors_origins() -> list:
+    """
+    Get allowed CORS origins from environment variables or use defaults.
+    
+    Environment variable: CORS_ORIGINS (comma-separated list)
+    Defaults to localhost origins for development
+    """
+    cors_env = os.getenv("CORS_ORIGINS")
+    
+    if cors_env:
+        # Parse comma-separated list
+        origins = [origin.strip() for origin in cors_env.split(",")]
+        logger.info(f"CORS configured with {len(origins)} origins from environment")
+        return origins
+    else:
+        # Default to localhost for development
+        defaults = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:3000",
+        ]
+        logger.warning(
+            "CORS_ORIGINS environment variable not set. "
+            f"Using development defaults: {defaults}"
+        )
+        return defaults
+
+origins = _get_cors_origins()
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,6 +72,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+logger.info(f"CORS middleware configured with {len(origins)} allowed origins")
 
 # 4. Include Routers
 app.include_router(auth.router)
