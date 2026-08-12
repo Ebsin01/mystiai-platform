@@ -57,11 +57,32 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 logger.info(f"CORS middleware configured with {len(origins)} allowed origins: {origins}")
+
+
+# 4. Global Exception Handler ensuring CORS headers on 500 errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    from fastapi.responses import JSONResponse
+    logger.error(f"Global unhandled exception: {exc}", exc_info=True)
+    origin = request.headers.get("origin")
+    headers = {}
+    if origin and (origin in origins or "*" in origins):
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+    else:
+        headers["Access-Control-Allow-Origin"] = "*"
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+        headers=headers,
+    )
+
 
 
 # 4. Include Routers
