@@ -4,7 +4,7 @@ import axios from 'axios';
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   process.env.REACT_APP_API_BASE_URL ||
-  'https://mystial-platform-backend.onrender.com';
+  'https://mystiai-platform-backend.onrender.com';
 
 const api = axios.create({
   baseURL: BASE_URL,

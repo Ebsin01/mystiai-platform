@@ -35,35 +35,23 @@ except Exception as e:
 # 2. Instantiate FastAPI app (Single instance)
 app = FastAPI(title="Palmistry & Tarot Intelligence Platform")
 
-# 3. CORS Configuration - Environment-based
-def _get_cors_origins() -> list:
-    """
-    Get allowed CORS origins from environment variables or use defaults.
-    
-    Environment variable: CORS_ORIGINS (comma-separated list)
-    Defaults to localhost origins for development
-    """
-    cors_env = os.getenv("CORS_ORIGINS")
-    
-    if cors_env:
-        # Parse comma-separated list
-        origins = [origin.strip() for origin in cors_env.split(",")]
-        logger.info(f"CORS configured with {len(origins)} origins from environment")
-        return origins
-    else:
-        # Default to localhost for development
-        defaults = [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:3000",
-        ]
-        logger.warning(
-            "CORS_ORIGINS environment variable not set. "
-            f"Using development defaults: {defaults}"
-        )
-        return defaults
+# 3. CORS Configuration
+frontend_url = os.getenv("FRONTEND_URL", "").rstrip("/")
 
-origins = _get_cors_origins()
+origins = [
+    "https://mystiai-platform.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+if frontend_url:
+    origins.append(frontend_url)
+
+cors_env = os.getenv("CORS_ORIGINS")
+if cors_env:
+    origins.extend([o.strip() for o in cors_env.split(",") if o.strip()])
+
+origins = list(dict.fromkeys([o for o in origins if o]))
 
 app.add_middleware(
     CORSMiddleware,
@@ -73,7 +61,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logger.info(f"CORS middleware configured with {len(origins)} allowed origins")
+logger.info(f"CORS middleware configured with {len(origins)} allowed origins: {origins}")
+
 
 # 4. Include Routers
 app.include_router(auth.router)
