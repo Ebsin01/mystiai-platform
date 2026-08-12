@@ -24,13 +24,13 @@ from app.model.three_card_reading import ThreeCardReading
 from app.routers import auth, palm, tarot, reports, pdf, notifications
 from app.services.gemini_service import generate_ai_report
 
-# 1. Create database tables on startup
+# 1. Create database tables on startup (with graceful fallback)
 try:
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables initialized successfully")
 except Exception as e:
-    logger.error(f"Failed to create database tables: {str(e)}")
-    raise
+    logger.error(f"Database connection error: {e}")
+    logger.warning("Continuing startup despite database error - database may be temporarily unavailable")
 
 # 2. Instantiate FastAPI app (Single instance)
 app = FastAPI(title="Palmistry & Tarot Intelligence Platform")

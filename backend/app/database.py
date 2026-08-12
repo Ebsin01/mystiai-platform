@@ -1,7 +1,17 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = "postgresql+psycopg2://postgres:Maria15@localhost:5432/ai_palmistry"
+# Fetch DATABASE_URL from environment variables
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://localhost/palmistry_db")
+
+# Convert postgres:// to postgresql:// for compatibility
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Use psycopg2 driver for better compatibility
+if "postgresql://" in DATABASE_URL and "+psycopg2" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 engine = create_engine(DATABASE_URL)
 
