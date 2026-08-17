@@ -5,14 +5,28 @@ import api from './api';
  */
 const tarotService = {
   /**
+   * Fetch all tarot cards.
+   * Backend: GET /tarot/cards
+   */
+  getTarotCards: async () => {
+    const response = await api.get('/tarot/cards');
+    return response.data;
+  },
+
+  /**
    * Generate a three-card tarot reading.
    * Backend: POST /tarot/three-card-reading
    */
-  generateThreeCardReading: async (question) => {
+  generateThreeCardReading: async (question, cardIds = []) => {
     const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    const payload = { question };
+    if (Array.isArray(cardIds) && cardIds.length > 0) {
+      payload.card_ids = cardIds;
+      payload.cards = cardIds;
+    }
     const response = await api.post(
       '/tarot/three-card-reading',
-      { question },
+      payload,
       {
         headers: {
           Authorization: token ? `Bearer ${token}` : undefined,

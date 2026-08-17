@@ -48,6 +48,10 @@ class ThreeCardReadingRequest(BaseModel):
 
     question: str | None = None
 
+    card_ids: list[int] | None = None
+
+    cards: list[int] | None = None
+
 
 # =====================================================
 # RESPONSE MODEL - SINGLE CARD
@@ -461,32 +465,45 @@ def three_card_reading(
         TarotCard
     ).all()
 
-    # Check minimum cards
+    # Auto-seed default cards if DB has < 3 cards
     if len(cards) < 3:
+        default_cards = [
+            TarotCard(name="The Fool", arcana="Major Arcana", suit="Trump", upright_meaning="New beginnings, innocence, spontaneity", reversed_meaning="Recklessness, risk-taking, risk"),
+            TarotCard(name="The Magician", arcana="Major Arcana", suit="Trump", upright_meaning="Manifestation, resourcefulness, power", reversed_meaning="Illusion, manipulation, unused ability"),
+            TarotCard(name="The High Priestess", arcana="Major Arcana", suit="Trump", upright_meaning="Intuition, sacred knowledge, divine feminine", reversed_meaning="Secrets, disconnected intuition, withdrawal"),
+            TarotCard(name="The Empress", arcana="Major Arcana", suit="Trump", upright_meaning="Femininity, beauty, nature, abundance", reversed_meaning="Creative block, dependence on others"),
+            TarotCard(name="The Emperor", arcana="Major Arcana", suit="Trump", upright_meaning="Authority, establishment, structure, father figure", reversed_meaning="Domination, excessive control, lack of discipline"),
+            TarotCard(name="The Hierophant", arcana="Major Arcana", suit="Trump", upright_meaning="Spiritual wisdom, religious beliefs, conformity", reversed_meaning="Personal beliefs, freedom, challenging status quo"),
+            TarotCard(name="The Lovers", arcana="Major Arcana", suit="Trump", upright_meaning="Love, harmony, relationships, values alignment", reversed_meaning="Self-love, disharmony, imbalance, misalignment"),
+            TarotCard(name="The Chariot", arcana="Major Arcana", suit="Trump", upright_meaning="Control, willpower, success, action, determination", reversed_meaning="Self-doubt, lack of direction, loss of control"),
+        ]
+        for dc in default_cards:
+            existing = db.query(TarotCard).filter(TarotCard.name == dc.name).first()
+            if not existing:
+                db.add(dc)
+        db.commit()
+        cards = db.query(TarotCard).all()
 
-        raise HTTPException(
+    # Select 3 cards based on requested card_ids/cards or random selection
+    requested_ids = reading_data.card_ids or reading_data.cards or []
+    selected_cards = []
+    if requested_ids and len(requested_ids) >= 3:
+        card_map = {c.id: c for c in cards}
+        for cid in requested_ids[:3]:
+            if cid in card_map and card_map[cid] not in selected_cards:
+                selected_cards.append(card_map[cid])
 
-            status_code=400,
-
-            detail=(
-
-                "At least 3 Tarot cards "
-
-                "are required"
-
-            )
-
-        )
-
-
-    # Select 3 unique cards
-    selected_cards = random.sample(
-
-        cards,
-
-        3
-
-    )
+    if len(selected_cards) < 3:
+        remaining_cards = [c for c in cards if c not in selected_cards]
+        if not remaining_cards:
+            remaining_cards = cards
+        needed = 3 - len(selected_cards)
+        if len(remaining_cards) >= needed:
+            selected_cards.extend(random.sample(remaining_cards, needed))
+        else:
+            selected_cards.extend(remaining_cards)
+        while len(selected_cards) < 3 and selected_cards:
+            selected_cards.append(selected_cards[0])
 
 
     # Positions

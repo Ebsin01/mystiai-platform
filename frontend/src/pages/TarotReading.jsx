@@ -26,12 +26,30 @@ const TarotReading = () => {
   const [detailError, setDetailError] = useState('');
   const [detailEntry, setDetailEntry] = useState(null);
 
+  const [availableCards, setAvailableCards] = useState([]);
+  const [selectedCards, setSelectedCards] = useState([]);
+
   const formatDateTime = (value) => {
     if (!value) return 'Unknown';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
   };
+
+  useEffect(() => {
+    const fetchCards = async () => {
+      try {
+        const cardsData = await tarotService.getTarotCards();
+        if (Array.isArray(cardsData) && cardsData.length > 0) {
+          setAvailableCards(cardsData);
+        }
+      } catch (err) {
+        console.warn('Could not pre-fetch tarot cards deck:', err);
+      }
+    };
+    fetchCards();
+    loadHistory();
+  }, []);
 
   const loadHistory = async () => {
     const token = localStorage.getItem('access_token') || localStorage.getItem('token');
@@ -88,10 +106,6 @@ const TarotReading = () => {
     }
   };
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
-
   const handleGenerateReading = async (e) => {
     if (e) e.preventDefault();
 
@@ -110,7 +124,18 @@ const TarotReading = () => {
     setError('');
 
     try {
-      const data = await tarotService.generateThreeCardReading(question.trim());
+      // Check card array before making request; if < 3 picked, auto-select 3 random cards
+      let cardIdsToSubmit = selectedCards.map((c) => (typeof c === 'object' ? c.id : c)).filter(Boolean);
+      if (cardIdsToSubmit.length < 3) {
+        const pool = availableCards.length >= 3
+          ? availableCards.map((c) => c.id)
+          : [1, 2, 3, 4, 5, 6, 7, 8];
+        const shuffled = [...pool].sort(() => 0.5 - Math.random());
+        cardIdsToSubmit = shuffled.slice(0, 3);
+        setSelectedCards(cardIdsToSubmit);
+      }
+
+      const data = await tarotService.generateThreeCardReading(question.trim(), cardIdsToSubmit);
 
       if (!data || !Array.isArray(data.cards) || data.cards.length === 0) {
         throw new Error('No cards were returned by the server.');

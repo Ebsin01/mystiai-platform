@@ -26,3 +26,7 @@ class TarotReadingRequest(BaseModel):
 class ThreeCardReadingRequest(BaseModel):
 
     question: str | None = None
+
+    card_ids: list[int] | None = None
+
+    cards: list[int] | None = None

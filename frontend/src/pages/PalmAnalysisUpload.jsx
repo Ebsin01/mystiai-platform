@@ -441,18 +441,18 @@ const PalmAnalysisUpload = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
             <div className="detail-stat" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px', padding: '1rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '10px' }}>
               <span className="detail-stat-label" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Palm Measurements</span>
-              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Image Width: {formatValue(measurements?.image_width)}</span>
-              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Image Height: {formatValue(measurements?.image_height)}</span>
-              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Palm Width: {formatValue(measurements?.palm_width)}</span>
-              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Palm Length: {formatValue(measurements?.palm_length)}</span>
+              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Image Width: {formatValue(measurements?.image_width ?? palmFeatures?.image_width)}</span>
+              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Image Height: {formatValue(measurements?.image_height ?? palmFeatures?.image_height)}</span>
+              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Palm Width: {formatValue(measurements?.palm_width ?? palmFeatures?.palm_width)}</span>
+              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Palm Length: {formatValue(measurements?.palm_length ?? palmFeatures?.palm_length)}</span>
             </div>
 
             <div className="detail-stat" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px', padding: '1rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '10px' }}>
               <span className="detail-stat-label" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Palm Features</span>
               <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Index Finger Length: {formatValue(palmFeatures?.index_finger_length)}</span>
               <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Middle Finger Length: {formatValue(palmFeatures?.middle_finger_length)}</span>
-              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Palm Width: {formatValue(palmFeatures?.palm_width)}</span>
-              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Palm Length: {formatValue(palmFeatures?.palm_length)}</span>
+              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Palm Width: {formatValue(palmFeatures?.palm_width ?? measurements?.palm_width)}</span>
+              <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Palm Length: {formatValue(palmFeatures?.palm_length ?? measurements?.palm_length)}</span>
             </div>
           </div>
 

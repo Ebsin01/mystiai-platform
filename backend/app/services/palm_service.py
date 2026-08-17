@@ -126,6 +126,9 @@ def process_palm_image(image_bytes):
             }
 
 
+        height, width = image.shape[:2]
+        image_height, image_width = int(height), int(width)
+
         # --------------------------------------------------------
         # CONVERT BGR -> RGB
         # --------------------------------------------------------
@@ -218,28 +221,28 @@ def process_palm_image(image_bytes):
 
 
         # --------------------------------------------------------
-        # BASIC FEATURE EXTRACTION
+        # BASIC FEATURE EXTRACTION (Scaled by image dimensions)
         # --------------------------------------------------------
 
         palm_width = abs(
             index_finger.x
             - thumb.x
-        )
+        ) * image_width
 
         palm_length = abs(
             middle_finger.y
             - wrist.y
-        )
+        ) * image_height
 
         index_finger_length = abs(
             index_finger.y
             - wrist.y
-        )
+        ) * image_height
 
         middle_finger_length = abs(
             middle_finger.y
             - wrist.y
-        )
+        ) * image_height
 
 
         # --------------------------------------------------------
@@ -266,14 +269,12 @@ def process_palm_image(image_bytes):
 
             # ----------------------------------------------------
             # RUN PALM ANALYSIS ENGINE
-            #
-            # IMPORTANT:
             # Pass MediaPipe landmarks to the engine.
             # ----------------------------------------------------
 
             palm_analysis = analyze_palm(
-            image_path,
-            landmarks
+                image_path,
+                landmarks
             )
 
 
@@ -289,6 +290,8 @@ def process_palm_image(image_bytes):
         return {
             "hand_detected": True,
             "palm_features": {
+                "image_width": image_width,
+                "image_height": image_height,
                 "palm_width": round(palm_width, 4),
                 "palm_length": round(palm_length, 4),
                 "index_finger_length": round(index_finger_length, 4),
